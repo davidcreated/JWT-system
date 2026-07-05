@@ -89,12 +89,44 @@ func SignUP() gin.HandlerFunc {
 
 // Login handles user authentication
 func Login() gin.HandlerFunc {
+return func(c *gin.Context) {
+var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+var user models.User 
 
+// for existing users in db
+var foundUser models.User 
+
+c.BindJSON(&user); err != nil{
+	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	return
+}
+
+err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+defer cancel()
+if err != nil{
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "email or password is incorrect"})
+	return
+}
+
+passwordIsValid, msg := helpers.VerifyPassword(*user.Password, *foundUser.Password)
+if !passwordIsValid || msg != ""{
+	c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+	return
+}
+
+}
 }
 
 func HashPassword()
 
-func VerifyPassword()
+func VerifyPassword(userPassword string , providedPassword	string)(bool, string ){
+	err:= bcrypt.ComapareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	
+	if err != nil {
+		return false, "email or password is incorrect"
+	}
+	return true, ""
+}
 
 func GetUser()
 
